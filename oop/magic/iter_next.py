@@ -157,3 +157,282 @@ except IndexError:
     assert True
 else:
     assert False, "не сгенерировалось исключение IndexError"
+
+# ------------------------------------------------------
+
+class Cell:
+    def __init__(self, data):
+        self.__data = data
+
+    @property
+    def data(self):
+        return self.__data
+
+    @data.setter
+    def data(self, data):
+        self.__data = data
+
+class TableValues:
+    def __init__(self, rows, cols, type_data=int):
+        self.values = [[Cell(0) for i in range(cols)] for j in range(rows)]
+        self.type_data = type_data
+        self.rows = rows
+        self.cols = cols
+
+        self._value = -1
+
+    def __getitem__(self, item):
+        self.__check_idx(item)
+        return self.values[item[0]][item[1]].data
+
+    def __setitem__(self, key, value):
+        self.__check_idx(key)
+        if not isinstance(value, self.type_data):
+            raise TypeError('неверный тип присваиваемых данных')
+
+        self.values[key[0]][key[1]].data = value
+
+    def __iter__(self):
+        self._value = -1
+        return self
+
+    def __next__(self):
+        while True:
+            self._value += 1
+            if self._value >= self.rows:
+                raise StopIteration
+            return [val.data for val in self.values[self._value]]
+
+    def __check_idx(self, idx):
+        if not (0 <= idx[0] < self.rows) or not (0 <= idx[1] < self.cols):
+            raise IndexError('неверный индекс')
+
+
+tb = TableValues(3, 2)
+n = m = 0
+for row in tb:
+    n += 1
+    for value in row:
+        m += 1
+        assert type(
+            value) == int and value == 0, "при переборе объекта класса TableValues с помощью вложенных циклов for, должен сначала возвращаться итератор для строк, а затем, этот итератор должен возвращать целые числа (значения соответствующих ячеек)"
+
+assert n > 1 and m > 1, "неверно отработали вложенные циклы для перебора ячеек таблицы"
+
+tb[0, 0] = 10
+assert tb[0, 0] == 10, "не работает запись нового значения в ячейку таблицы"
+
+try:
+    tb[2, 0] = 5.2
+except TypeError:
+    assert True
+else:
+    assert False, "не сгенерировалось исключение TypeError"
+
+try:
+    a = tb[2, 4]
+except IndexError:
+    assert True
+else:
+    assert False, "не сгенерировалось исключение IndexError"
+
+# ------------------------------------------------------
+print("*"*20, 'Matrix', '*'*20)
+
+class Matrix:
+    def __init__(self, *args):
+        if len(args) == 3:
+            rows, cols, fill_value = args
+            if not isinstance(rows, int)\
+                    or not isinstance(cols, int)\
+                    or not isinstance(fill_value, (int, float)):
+                raise TypeError('аргументы rows, cols - целые числа; fill_value - произвольное число')
+            self.matrix = [[fill_value for i in range(cols)] for j in range(rows)]
+            self.rows = rows
+            self.cols = cols
+
+        elif len(args) == 1:
+            matrix = args[0]
+            rows = len(matrix)
+            cols_lens = []
+
+            for row in matrix:
+                for i, val in enumerate(row):
+                    if not isinstance(val, (int, float)):
+                        raise TypeError('список должен быть прямоугольным, состоящим из чисел')
+                cols_lens.append(i+1)
+
+            if len(set(cols_lens)) != 1:
+                raise TypeError('список должен быть прямоугольным, состоящим из чисел')
+
+            self.matrix = matrix
+            self.rows = rows
+            self.cols = len(matrix[0])
+
+    def __check_idx(self, item):
+        row, col = item
+        if not isinstance(row, int)\
+                or not isinstance(col, int)\
+                or not (0 <= row < self.rows)\
+                or not (0 <= col < self.cols):
+            raise IndexError('недопустимые значения индексов')
+
+
+    def __getitem__(self, item):
+        assert isinstance(item, tuple)
+        self.__check_idx(item)
+        row, col = item
+        return self.matrix[row][col]
+
+    def __setitem__(self, key, value):
+        assert isinstance(key, tuple)
+        self.__check_idx(key)
+        if not isinstance(value, (int, float)):
+            raise TypeError('значения матрицы должны быть числами')
+        row, col = key
+        self.matrix[row][col] = value
+
+    def __check_matrix_shape(self, other):
+        rows, cols = len(other), len(other[0])
+        if rows != self.rows or cols != self.cols:
+            raise ValueError('операции возможны только с матрицами равных размеров')
+
+    def __add__(self, other):
+        new_matrix = []
+        if isinstance(other, Matrix):
+            self.__check_matrix_shape(other.matrix)
+
+            for i in range(self.rows):
+                col = []
+                for j in range(self.cols):
+                    col.append(self[i, j] + other[i, j])
+
+                new_matrix.append(col)
+
+
+        elif isinstance(other, (int, float)):
+            for i in range(self.rows):
+                col = []
+                for j in range(self.cols):
+                    col.append(self[i, j] + other)
+                new_matrix.append(col)
+
+        return Matrix(new_matrix)
+
+    def __sub__(self, other):
+        new_matrix = []
+        if isinstance(other, Matrix):
+            self.__check_matrix_shape(other.matrix)
+
+            for i in range(self.rows):
+                col = []
+                for j in range(self.cols):
+                    col.append(self[i, j] - other[i, j])
+
+                new_matrix.append(col)
+
+
+        elif isinstance(other, (int, float)):
+            for i in range(self.rows):
+                col = []
+                for j in range(self.cols):
+                    col.append(self[i, j] - other)
+                new_matrix.append(col)
+
+        return Matrix(new_matrix)
+
+list2D = [[1, 2], [3, 4], [5, 6, 7]]
+try:
+    st = Matrix(list2D)
+except TypeError:
+    assert True
+else:
+    assert False, "не сгенерировалось исключение TypeError для не прямоугольного списка в конструкторе Matrix"
+
+list2D = [[1, []], [3, 4], [5, 6]]
+try:
+    st = Matrix(list2D)
+except TypeError:
+    assert True
+else:
+    assert False, "не сгенерировалось исключение TypeError для списка не из чисел в конструкторе Matrix"
+
+try:
+    st = Matrix('1', 2, 0)
+except TypeError:
+    assert True
+else:
+    assert False, "не сгенерировалось исключение TypeError для не числовых аргументов в конструкторе Matrix"
+
+list2D = [[1, 2], [3, 4], [5, 6]]
+matrix = Matrix(list2D)
+assert matrix[2, 1] == 6, "неверно отработал конструктор или __getitem__"
+
+matrix = Matrix(4, 5, 10)
+assert matrix[3, 4] == 10, "неверно отработал конструктор или __getitem__"
+
+try:
+    v = matrix[3, -1]
+except IndexError:
+    assert True
+else:
+    assert False, "не сгенерировалось исключение IndexError"
+
+try:
+    v = matrix['0', 4]
+except IndexError:
+    assert True
+else:
+    assert False, "не сгенерировалось исключение IndexError"
+
+matrix[0, 0] = 7
+assert matrix[0, 0] == 7, "неверно отработал __setitem__"
+
+try:
+    matrix[0, 0] = 'a'
+except TypeError:
+    assert True
+else:
+    assert False, "не сгенерировалось исключение TypeError в __setitem__"
+
+m1 = Matrix([[1, 2], [3, 4]])
+m2 = Matrix([[1, 1], [1, 1], [1, 1]])
+
+try:
+    matrix = m1 + m2
+except ValueError:
+    assert True
+else:
+    assert False, "не сгенерировалось исключение ValueError при сложении матриц разных размеров"
+
+m1 = Matrix([[1, 2], [3, 4]])
+m2 = Matrix([[1, 1], [1, 1]])
+matrix = m1 + m2
+assert isinstance(matrix, Matrix), "операция сложения матриц должна возвращать экземпляр класса Matrix"
+assert matrix[1, 1] == 5, "неверно отработала операция сложения матриц"
+assert m1[1, 1] == 4 and m1[0, 1] == 2 and m2[1, 1] == 1 \
+       and m2[0, 0] == 1, "исходные матрицы не должны меняться при операции сложения"
+
+m1 = Matrix(2, 2, 1)
+id_m1_old = id(m1)
+m2 = Matrix(2, 2, 1)
+m1 = m1 + m2
+id_m1_new = id(m1)
+assert id_m1_old != id_m1_new, "в результате операции сложения должен создаваться НОВЫЙ экземпляр класса Matrix"
+
+matrix = Matrix(2, 2, 0)
+m = matrix + 10
+assert matrix[0, 0] == matrix[1, 1] == 0, "исходные матрицa не должна меняться при операции сложения c числом"
+assert m[0, 0] == 10, "неверно отработала операция сложения матрицы с числом"
+
+m1 = Matrix(2, 2, 1)
+m2 = Matrix([[0, 1], [1, 0]])
+identity_matrix = m1 - m2  # должна получиться единичная матрица
+assert m1[0, 0] == 1 and m1[1, 1] == 1 and m2[0, 0] == 0 \
+       and m2[0, 1] == 1, "исходные матрицы не должны меняться при операции вычитания"
+assert identity_matrix[0, 0] == 1 and identity_matrix[1, 1] == 1, "неверно отработала операция вычитания матриц"
+
+matrix = Matrix(2, 2, 1)
+m = matrix - 1
+assert matrix[0, 0] == matrix[1, 1] == 1, "исходные матрицa не должна меняться при операции вычитания c числом"
+assert m[0, 0] == m[1, 1] == 0, "неверно отработала операция вычитания числа из матрицы"
